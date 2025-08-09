@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  
+  <!-- 微信分享元数据 -->
+  <meta property="og:title" content="盲盒幸运抽 - 幸运大转盘" />
+  <meta property="og:type" content="activity" />
+  <meta property="og:image" content="https://picsum.photos/400/300?random=1" />
+  <meta property="og:description" content="参与抽奖，赢取美味零食和优惠券！每个手机号码限抽一次！" />
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="盲盒幸运抽 - 幸运大转盘">
+  <meta name="twitter:description" content="参与抽奖，赢取美味零食和优惠券！">
+  <meta name="twitter:image" content="https://picsum.photos/400/300?random=1">
+  
+  <title>盲盒幸运抽 - 幸运大转盘</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <!-- 配置Tailwind自定义颜色 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#dc5130',
+            color1: '#eca0a0',   // 浅粉色
+            color2: '#fad04f',   // 金黄色
+            color3: '#b7b4b5',   // 灰色
+            color4: '#42a7cf',   // 蓝色
+            color5: '#f08d3c',   // 橙色
+            color6: '#ee5143',   // 红色
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      /* 转盘相关样式 */
+     .wheel-container {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        aspect-ratio: 1/1;
+        margin: 0 auto;
+      }
+      
+      /* 转盘主体 */
+     .wheel {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
+        transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+      }
+      
+      /* 转盘扇区 - 每个60度，确保均匀分布 */
+     .wheel-segment {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        transform-origin: center;
+        clip-path: polygon(50% 50%, 100% 0, 100% 100%);
+      }
+      
+      /* 扇区内文字样式 - 保持白色 */
+     .segment-text {
+        position: absolute;
+        top: 20%;
+        right: 15%;
+        width: 40%;
+        text-align: center;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        transform-origin: bottom left;
+        font-size: clamp(12px, 3vw, 14px);
+        padding: 5px;
+        color: white;
+      }
+      
+      /* 转盘中心按钮 */
+     .wheel-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 25%;
+        height: 25%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        background-color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        z-index: 10;
+        cursor: pointer;
+      }
+      
+      /* 转盘指针 */
+     .wheel-pointer {
+        position: absolute;
+        top: -10%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 15px solid transparent;
+        border-right: 15px solid transparent;
+        border-bottom: 30px solid #df3c3e;
+        z-index: 5;
+        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+      }
+      
+      /* 其他样式 */
+      .btn-bounce {
+        animation: bounce 2s infinite;
+      }
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+        40% {transform: translateY(-10px);}
+        60% {transform: translateY(-5px);}
+      }
+      
+      /* 表格响应式处理 */
+     .table-responsive {
+        overflow-x: auto;
+      }
+      
+      /* 操作反馈动画 */
+     .btn-feedback {
+        transition: all 0.2s ease;
+      }
+     .btn-feedback:active {
+        transform: scale(0.95);
+      }
+      
+      /* 分享按钮样式 */
+     .share-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      
+      /* 适配小屏幕 */
+      @media (max-width: 360px) {
+        .wheel-container {
+          max-width: 300px;
+        }
+        
+        .segment-text {
+          font-size: 11px;
+        }
+        
+        .startBtn {
+          padding: 3px 6px;
+          font-size: 14px;
+        }
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+  <!-- 导航栏 -->
+  <nav class="bg-white shadow-sm fixed w-full z-50">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-gift text-primary text-2xl"></i>
+        <h1 class="text-xl font-bold">幸运大转盘</h1>
+      </div>
+      <div class="flex items-center space-x-4">
+        <!-- 分享按钮 -->
+        <button id="shareBtn" class="flex items-center space-x-1 text-sm text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-share-alt"></i>
+          <span class="hidden sm:inline">分享</span>
+        </button>
+        <!-- 管理按钮 -->
+        <button id="adminBtn" class="hidden md:flex items-center space-x-1 text-sm text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-cog"></i>
+          <span>管理</span>
+        </button>
+        <button id="helpBtn" class="text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-question-circle text-xl"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 主内容区 -->
+  <main class="container mx-auto px-4 pt-20 pb-16">
+    <!-- 抽奖区域 -->
+    <section class="max-w-4xl mx-auto">
+      <!-- 标题区域 -->
+      <div class="text-center mb-6 pt-4">
+        <h2 class="text-[clamp(1.5rem,5vw,2.5rem)] font-bold mb-3">盲盒幸运抽</h2>
+        <p class="text-gray-600 max-w-xl mx-auto">参与抽奖，赢取美味零食和优惠券！每个手机号码限抽一次！</p>
+      </div>
+      
+      <!-- 分享提示 - 仅在微信中显示 -->
+      <div id="wechatShareTip" class="bg-green-50 border border-green-200 rounded-lg p-3 mb-6 text-center hidden">
+        <p class="text-green-800 text-sm">
+          <i class="fa fa-lightbulb-o mr-1"></i>点击右上角 <i class="fa fa-ellipsis-v ml-1 mr-1"></i> 分享给好友或朋友圈
+        </p>
+      </div>
+      
+      <!-- 测试功能区 - 仅在测试阶段显示 -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-center">
+        <p class="text-blue-800 text-sm">
+          <i class="fa fa-info-circle mr-1"></i>测试模式：可使用不同手机号多次抽奖
+        </p>
+        <button id="resetUserBtn" class="mt-2 text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded btn-feedback">
+          <i class="fa fa-user-plus mr-1"></i>切换新用户
+        </button>
+      </div>
+      
+      <!-- 转盘容器 -->
+      <div class="wheel-container mb-8">
+        <!-- 转盘 -->
+        <div id="wheel" class="wheel shadow-lg">
+          <!-- 扇区1: 1个鸡腿 (0°) - 颜色#eca0a0 -->
+          <div class="wheel-segment bg-color1" style="transform: rotate(0deg);">
+            <div class="segment-text" style="transform: rotate(30deg);">1个鸡腿</div>
+          </div>
+          
+          <!-- 扇区2: 1只凤爪 (60°) - 颜色#fad04f -->
+          <div class="wheel-segment bg-color2" style="transform: rotate(60deg);">
+            <div class="segment-text" style="transform: rotate(90deg);">1只凤爪</div>
+          </div>
+          
+          <!-- 扇区3: 1根鸭脖 (120°) - 颜色#b7b4b5 -->
+          <div class="wheel-segment bg-color3" style="transform: rotate(120deg);">
+            <div class="segment-text" style="transform: rotate(150deg);">1根鸭脖</div>
+          </div>
+          
+          <!-- 扇区4: 30元券 (180°) - 颜色#42a7cf -->
+          <div class="wheel-segment bg-color4" style="transform: rotate(180deg);">
+            <div class="segment-text" style="transform: rotate(210deg);">30元券</div>
+          </div>
+          
+          <!-- 扇区5: 1听啤酒 (240°) - 颜色#f08d3c -->
+          <div class="wheel-segment bg-color5" style="transform: rotate(240deg);">
+            <div class="segment-text" style="transform: rotate(270deg);">1听啤酒</div>
+          </div>
+          
+          <!-- 扇区6: 1份花生米 (300°) - 颜色#ee5143 -->
+          <div class="wheel-segment bg-color6" style="transform: rotate(300deg);">
+            <div class="segment-text" style="transform: rotate(330deg);">1份花生米</div>
+          </div>
+        </div>
+        
+        <!-- 转盘中心按钮 -->
+        <div class="wheel-center" id="wheelCenterBtn">
+          <div class="bg-primary text-white font-bold py-2 px-4 rounded-full">开始</div>
+        </div>
+        
+        <!-- 转盘指针 -->
+        <div class="wheel-pointer"></div>
+      </div>
+      
+      <!-- 抽奖按钮 -->
+      <div class="text-center">
+        <button id="startBtn" class="bg-primary hover:bg-primary/90 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 btn-bounce">
+          <i class="fa fa-play-circle mr-2"></i>开始抽奖
+        </button>
+      </div>
+    </section>
+    
+    <!-- 活动说明 -->
+    <section class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-5 my-6 text-gray-700">
+      <h3 class="text-lg font-bold mb-3 text-primary">活动说明</h3>
+      <div class="space-y-2 text-sm">
+        <p class="font-bold text-red-500">盲盒幸运抽！活动持续3天，人人有奖，抽中奖品请截图</p>
+        <p>每个手机号码限参与一次抽奖，奖品请在8月1日——8月7日到店加店长微信领取，过期作废</p>
+        <p>若发现有违规作假，一律取消奖品，最终解释权在本店</p>
+      </div>
+    </section>
+    
+    <!-- 分享按钮区域 - 移动端显示 -->
+    <div class="max-w-4xl mx-auto mt-8 mb-4 md:hidden">
+      <button id="mobileShareBtn" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg shadow transition-all share-btn btn-feedback">
+        <i class="fa fa-share-alt"></i>
+        <span>分享到微信好友或朋友圈</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- 分享提示模态框 -->
+  <div id="shareModal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 text-center transform transition-all scale-95 opacity-0" id="shareContent">
+      <div class="mb-6">
+        <img src="https://picsum.photos/200/200?random=2" alt="分享图示" class="w-32 h-32 mx-auto rounded-full object-cover">
+      </div>
+      
+      <h3 class="text-xl font-bold mb-4">邀请好友参与抽奖</h3>
+      <p class="text-gray-600 mb-6">把幸运大转盘分享给好友，一起赢取美味零食和优惠券！</p>
+      
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <button id="shareWechatBtn" class="flex flex-col items-center justify-center bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg transition-all btn-feedback">
+          <i class="fa fa-weixin text-2xl mb-2"></i>
+          <span>微信好友</span>
+        </button>
+        <button id="shareTimelineBtn" class="flex flex-col items-center justify-center bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg transition-all btn-feedback">
+          <i class="fa fa-share-alt text-2xl mb-2"></i>
+          <span>朋友圈</span>
+        </button>
+      </div>
+      
+      <button id="closeShare" 
+        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-4 rounded-lg transition-all btn-feedback">
+        取消
+      </button>
+    </div>
+  </div>
+
+  <!-- 用户登记模态框 -->
+  <div id="wechatModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 transform transition-all scale-95 opacity-0" id="modalContent">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold">用户登记</h3>
+          <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+            <i class="fa fa-times text-xl"></i>
+          </button>
+        </div>
+        
+        <form id="wechatForm" class="space-y-4">
+          <div>
+            <label for="phoneNumber" class="block text-sm font-medium text-gray-700 mb-1">手机号码 <span class="text-red-500">*</span></label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                <i class="fa fa-phone"></i>
+              </span>
+              <input type="tel" id="phoneNumber" name="phoneNumber" required 
+                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                placeholder="请输入您的手机号码">
+            </div>
+            <p class="text-red-500 text-sm mt-1 hidden" id="phoneError">请输入有效的11位手机号码</p>
+          </div>
+          
+          <div class="pt-2">
+            <button type="button" id="submitBtn" 
+              class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 px-4 rounded-lg shadow hover:shadow-lg transition-all btn-feedback">
+              <i class="fa fa-check mr-2"></i>确认并登记
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 抽奖结果模态框 -->
+  <div id="resultModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 text-center transform transition-all scale-95 opacity-0" id="resultContent">
+      <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i class="fa fa-trophy text-4xl text-primary"></i>
+      </div>
+      
+      <h3 class="text-2xl font-bold mb-2">恭喜您！<span id="winnerPhone" class="text-base font-normal text-gray-600"></span></h3>
+      <p class="text-gray-600 mb-2">您抽中了：</p>
+      <p id="prizeResult" class="text-2xl font-bold text-primary mb-6">1个鸡腿</p>
+      
+      <p class="text-gray-500 text-sm mb-6">奖品已记录，请到店出示此页面领取</p>
+      
+      <div class="flex gap-3 mb-4">
+        <button id="shareResultBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg transition-all share-btn btn-feedback">
+          <i class="fa fa-share-alt"></i>
+          <span>分享</span>
+        </button>
+        <button id="closeResult" 
+          class="flex-1 bg-primary hover:bg-primary/90 text-white font-bold py-2 px-4 rounded-lg transition-all btn-feedback">
+          关闭
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理员后台 -->
+  <div id="adminPanel" class="fixed inset-0 bg-white z-50 transform translate-x-full transition-transform duration-300 ease-in-out">
+    <div class="h-full flex flex-col">
+      <div class="p-4 border-b flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <i class="fa fa-dashboard text-primary text-xl"></i>
+          <h2 class="text-xl font-bold">管理后台</h2>
+        </div>
+        <button id="closeAdmin" class="text-gray-500 hover:text-gray-700 p-2 btn-feedback">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <div class="p-4 border-b">
+        <div class="flex items-center space-x-2">
+          <input type="password" id="adminPassword" placeholder="请输入管理员密码" 
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+          <button id="loginAdmin" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors btn-feedback">
+            登录
+          </button>
+        </div>
+      </div>
+      
+      <!-- 未登录时显示提示 -->
+      <div id="adminLoginPrompt" class="flex-1 flex items-center justify-center p-4">
+        <div class="text-center">
+          <i class="fa fa-lock text-5xl text-gray-300 mb-4"></i>
+          <p class="text-gray-500">请输入管理员密码登录</p>
+        </div>
+      </div>
+      
+      <!-- 登录后才显示的内容 -->
+      <div id="adminContent" class="flex-1 overflow-auto p-4 hidden">
+        <div class="mb-4 text-right flex justify-between">
+          <button id="refreshRecordsBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors btn-feedback">
+            <i class="fa fa-refresh mr-1"></i>刷新记录
+          </button>
+          <button id="clearRecordsBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition-colors btn-feedback">
+            <i class="fa fa-trash mr-1"></i>清空所有中奖记录
+          </button>
+        </div>
+        
+        <div class="mb-6">
+          <h3 class="text-lg font-bold mb-3">中奖记录</h3>
+          <div class="bg-gray-50 rounded-lg overflow-hidden shadow table-responsive">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">手机号码</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">中奖奖品</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">抽奖时间</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">核销时间</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                </tr>
+              </thead>
+              <tbody id="prizeRecords" class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+                    暂无记录
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-bold mb-3">统计信息</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-4 rounded-lg shadow">
+              <h4 class="text-sm text-gray-500 mb-1">总参与人数</h4>
+              <p id="totalParticipants" class="text-2xl font-bold">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+              <h4 class="text-sm text-gray-500 mb-1">奖品发放总数（已核销）</h4>
+              <p id="totalPrizes" class="text-2xl font-bold">0</p>
+            </div>
+          </div>
+          
+          <div class="mt-4 bg-white p-4 rounded-lg shadow">
+            <h4 class="text-sm text-gray-500 mb-3">各奖品中奖次数</h4>
+            <div class="space-y-2">
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>1个鸡腿</span>
+                  <span id="countChicken">0</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div id="barChicken" class="bg-color1 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>1只凤爪</span>
+                  <span id="countClaw">0</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div id="barClaw" class="bg-color2 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>1根鸭脖</span>
+                  <span id="countNeck">0</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div id="barNeck" class="bg-color3 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>30元券</span>
+                  <span id="countCoupon">0</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div id="barCoupon" class="bg-color4 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>1听啤酒</span>
+                  <span id="countBeer">0</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div id="barBeer" class="bg-color5 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span>1份花生米</span>
+                  <span id="countPeanut">0</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div id="barPeanut" class="bg-color6 h-2 rounded-full" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 帮助模态框 -->
+  <div id="helpModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 transform transition-all scale-95 opacity-0" id="helpContent">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold">使用帮助</h3>
+          <button id="closeHelp" class="text-gray-500 hover:text-gray-700 btn-feedback">
+            <i class="fa fa-times text-xl"></i>
+          </button>
+        </div>
+        
+        <div class="space-y-4 text-gray-700">
+          <div>
+            <h4 class="font-bold mb-1">如何参与抽奖？</h4>
+            <p class="text-sm">点击"开始抽奖"按钮，输入手机号码后即可参与抽奖。每个手机号码限抽一次！</p>
+          </div>
+          <div>
+            <h4 class="font-bold mb-1">如何领取奖品？</h4>
+            <p class="text-sm">中奖后，请保存中奖页面，到店出示即可领取相应奖品。</p>
+          </div>
+          <div>
+            <h4 class="font-bold mb-1">活动时间</h4>
+            <p class="text-sm">本活动持续3天，奖品请在8月1日——8月7日到店领取。</p>
+          </div>
+          <div>
+            <h4 class="font-bold mb-1">如何分享？</h4>
+            <p class="text-sm">点击右上角分享按钮，可将活动分享给微信好友或朋友圈。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-gray-800 text-white py-6">
+    <div class="container mx-auto px-4">
+      <div class="text-center">
+        <p class="mb-2 text-sm">© 2025 盲盒幸运抽活动</p>
+        <p class="text-xs text-gray-400">本活动最终解释权归主办方所有</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // 奖品列表
+    const prizes = [
+      "1个鸡腿",
+      "1只凤爪",
+      "1根鸭脖",
+      "30元券",
+      "1听啤酒",
+      "1份花生米"
+    ];
+    
+    // 管理员配置
+    const ADMIN_PASSWORD = '5tgbhu8';
+    const ADMIN_PHONE = '13868965116'; // 管理员手机号码
+    const TEST_PHONES = ['13484060121', '13868965116']; // 测试手机号，可多次抽奖
+    
+    // DOM元素
+    const wheel = document.getElementById('wheel');
+    const wheelCenterBtn = document.getElementById('wheelCenterBtn');
+    const startBtn = document.getElementById('startBtn');
+    const wechatModal = document.getElementById('wechatModal');
+    const modalContent = document.getElementById('modalContent');
+    const closeModal = document.getElementById('closeModal');
+    const wechatForm = document.getElementById('wechatForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const phoneNumber = document.getElementById('phoneNumber');
+    const phoneError = document.getElementById('phoneError');
+    const resultModal = document.getElementById('resultModal');
+    const resultContent = document.getElementById('resultContent');
+    const prizeResult = document.getElementById('prizeResult');
+    const winnerPhone = document.getElementById('winnerPhone');
+    const closeResult = document.getElementById('closeResult');
+    const adminBtn = document.getElementById('adminBtn');
+    const adminPanel = document.getElementById('adminPanel');
+    const closeAdmin = document.getElementById('closeAdmin');
+    const adminPassword = document.getElementById('adminPassword');
+    const loginAdmin = document.getElementById('loginAdmin');
+    const adminContent = document.getElementById('adminContent');
+    const adminLoginPrompt = document.getElementById('adminLoginPrompt');
+    const prizeRecords = document.getElementById('prizeRecords');
+    const totalParticipants = document.getElementById('totalParticipants');
+    const totalPrizes = document.getElementById('totalPrizes');
+    const helpBtn = document.getElementById('helpBtn');
+    const helpModal = document.getElementById('helpModal');
+    const helpContent = document.getElementById('helpContent');
+    const closeHelp = document.getElementById('closeHelp');
+    const clearRecordsBtn = document.getElementById('clearRecordsBtn');
+    const refreshRecordsBtn = document.getElementById('refreshRecordsBtn');
+    const resetUserBtn = document.getElementById('resetUserBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    const mobileShareBtn = document.getElementById('mobileShareBtn');
+    const shareModal = document.getElementById('shareModal');
+    const shareContent = document.getElementById('shareContent');
+    const closeShare = document.getElementById('closeShare');
+    const shareWechatBtn = document.getElementById('shareWechatBtn');
+    const shareTimelineBtn = document.getElementById('shareTimelineBtn');
+    const shareResultBtn = document.getElementById('shareResultBtn');
+    const wechatShareTip = document.getElementById('wechatShareTip');
+    
+    // 奖品统计元素
+    const prizeCountElements = {
+      "1个鸡腿": { count: document.getElementById('countChicken'), bar: document.getElementById('barChicken') },
+      "1只凤爪": { count: document.getElementById('countClaw'), bar: document.getElementById('barClaw') },
+      "1根鸭脖": { count: document.getElementById('countNeck'), bar: document.getElementById('barNeck') },
+      "30元券": { count: document.getElementById('countCoupon'), bar: document.getElementById('barCoupon') },
+      "1听啤酒": { count: document.getElementById('countBeer'), bar: document.getElementById('barBeer') },
+      "1份花生米": { count: document.getElementById('countPeanut'), bar: document.getElementById('barPeanut') }
+    };
+    
+    // 状态变量
+    let isSpinning = false;
+    let hasRegistered = false;
+    let hasDrawed = false;
+    let userInfo = null;
+    let prizeRecordsData = [];
+    let isAdminLoggedIn = false;
+    let isWechatBrowser = false;
+    
+    // 初始化 - 从本地存储加载数据
+    function init() {
+      // 检测是否在微信浏览器中
+      checkWechatBrowser();
+      
+      // 从localStorage加载数据
+      loadDataFromStorage();
+      
+      // 更新界面
+      updateAdminStats();
+      updateAdminButtonVisibility();
+      
+      // 绑定所有事件处理函数
+      bindEvents();
+    }
+    
+    // 检测是否在微信浏览器中
+    function checkWechatBrowser() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      isWechatBrowser = /micromessenger/.test(userAgent);
+      
+      // 在微信中显示分享提示
+      if (isWechatBrowser) {
+        wechatShareTip.classList.remove('hidden');
+      }
+    }
+    
+    // 从本地存储加载数据
+    function loadDataFromStorage() {
+      hasRegistered = localStorage.getItem('hasRegistered') === 'true';
+      hasDrawed = localStorage.getItem('hasDrawed') === 'true';
+      
+      const savedUserInfo = localStorage.getItem('userInfo');
+      userInfo = savedUserInfo? JSON.parse(savedUserInfo) : null;
+      
+      const savedRecords = localStorage.getItem('prizeRecords');
+      prizeRecordsData = savedRecords? JSON.parse(savedRecords) : [];
+    }
+    
+    // 保存数据到本地存储
+    function saveDataToStorage() {
+      localStorage.setItem('hasRegistered', hasRegistered);
+      localStorage.setItem('hasDrawed', hasDrawed);
+      
+      if (userInfo) {
+        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+      }
+      
+      localStorage.setItem('prizeRecords', JSON.stringify(prizeRecordsData));
+    }
+    
+    // 绑定所有事件处理函数
+    function bindEvents() {
+      // 抽奖相关事件
+      submitBtn.addEventListener('click', submitForm);
+      wheelCenterBtn.addEventListener('click', () => {
+        if (!isSpinning &&!hasDrawed) {
+          startBtn.click();
+        }
+      });
+      phoneNumber.addEventListener('input', validatePhone);
+      startBtn.addEventListener('click', startDrawProcess);
+      
+      // 切换用户按钮事件
+      resetUserBtn.addEventListener('click', resetUserState);
+      
+      // 分享相关事件
+      shareBtn.addEventListener('click', () => showModal(shareModal, shareContent));
+      mobileShareBtn.addEventListener('click', () => showModal(shareModal, shareContent));
+      closeShare.addEventListener('click', () => hideModal(shareModal, shareContent));
+      shareWechatBtn.addEventListener('click', shareToWechat);
+      shareTimelineBtn.addEventListener('click', shareToTimeline);
+      shareResultBtn.addEventListener('click', function() {
+        hideModal(resultModal, resultContent);
+        setTimeout(() => showModal(shareModal, shareContent), 300);
+      });
+      
+      // 模态框关闭事件
+      closeModal.addEventListener('click', () => hideModal(wechatModal, modalContent));
+      closeResult.addEventListener('click', () => {
+        hideModal(resultModal, resultContent);
+        updateAdminButtonVisibility();
+      });
+      closeHelp.addEventListener('click', () => hideModal(helpModal, helpContent));
+      
+      // 管理员面板事件
+      adminBtn.addEventListener('click', openAdminPanel);
+      closeAdmin.addEventListener('click', closeAdminPanel);
+      loginAdmin.addEventListener('click', adminLogin);
+      
+      // 刷新记录按钮
+      refreshRecordsBtn.addEventListener('click', function() {
+        if (isAdminLoggedIn) {
+          refreshRecords();
+        }
+      });
+      
+      // 清空记录按钮
+      clearRecordsBtn.addEventListener('click', function() {
+        if (isAdminLoggedIn) {
+          clearAllRecords();
+        }
+      });
+      
+      // 帮助按钮事件
+      helpBtn.addEventListener('click', () => showModal(helpModal, helpContent));
+      
+      // 点击模态框外部关闭
+      wechatModal.addEventListener('click', (e) => {
+        if (e.target === wechatModal) hideModal(wechatModal, modalContent);
+      });
+      resultModal.addEventListener('click', (e) => {
+        if (e.target === resultModal) {
+          hideModal(resultModal, resultContent);
+          updateAdminButtonVisibility();
+        }
+      });
+      helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) hideModal(helpModal, helpContent);
+      });
+      shareModal.addEventListener('click', (e) => {
+        if (e.target === shareModal) hideModal(shareModal, shareContent);
+      });
+    }
+    
+    // 分享到微信好友
+    function shareToWechat() {
+      hideModal(shareModal, shareContent);
+      
+      if (isWechatBrowser) {
+        alert('请点击右上角菜单，选择"发送给朋友"');
+      } else {
+        alert('请复制链接发送给微信好友');
+        copyCurrentUrl();
+      }
+    }
+    
+    // 分享到朋友圈
+    function shareToTimeline() {
+      hideModal(shareModal, shareContent);
+      
+      if (isWechatBrowser) {
+        alert('请点击右上角菜单，选择"分享到朋友圈"');
+      } else {
+        alert('请复制链接到微信朋友圈');
+        copyCurrentUrl();
+      }
+    }
+    
+    // 复制当前URL
+    function copyCurrentUrl() {
+      const url = window.location.href;
+      
+      navigator.clipboard.writeText(url).then(() => {
+        alert('链接已复制到剪贴板');
+      }).catch(err => {
+        console.error('无法复制链接: ', err);
+        alert('复制失败，请手动复制网址');
+      });
+    }
+    
+    // 重置用户状态，允许使用新手机号抽奖
+    function resetUserState() {
+      // 生成一个随机测试手机号
+      const randomPhone = '13' + Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
+      
+      // 重置用户状态
+      hasRegistered = false;
+      hasDrawed = false;
+      userInfo = null;
+      
+      // 重置按钮状态
+      startBtn.disabled = false;
+      wheelCenterBtn.style.pointerEvents = 'auto';
+      startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      startBtn.innerHTML = '<i class="fa fa-play-circle mr-2"></i>开始抽奖';
+      
+      // 保存数据
+      saveDataToStorage();
+      
+      // 更新界面
+      updateAdminButtonVisibility();
+      
+      // 填充随机手机号到输入框并显示模态框
+      phoneNumber.value = randomPhone;
+      validatePhone(); // 验证生成的手机号
+      showModal(wechatModal, modalContent);
+      
+      // 显示提示
+      alert('已切换到新用户状态，可使用新手机号抽奖');
+    }
+    
+    // 更新管理员按钮可见性
+    function updateAdminButtonVisibility() {
+      const isAdmin = userInfo && userInfo.phoneNumber === ADMIN_PHONE;
+      
+      if (isAdmin ||!hasDrawed) {
+        adminBtn.classList.remove('hidden');
+      } else {
+        adminBtn.classList.add('hidden');
+      }
+    }
+    
+    // 验证手机号码
+    function validatePhone() {
+      const phonePattern = /^1[3-9]\d{9}$/;
+      const isValid = phonePattern.test(phoneNumber.value.trim());
+      
+      if (!isValid) {
+        phoneError.classList.remove('hidden');
+      } else {
+        phoneError.classList.add('hidden');
+      }
+      
+      return isValid;
+    }
+    
+    // 提交表单
+    function submitForm() {
+      if (!validatePhone()) return;
+      
+      const phone = phoneNumber.value.trim();
+      
+      // 检查该手机号是否已抽奖
+      const hasPhoneDrawed = prizeRecordsData.some(record => record.phoneNumber === phone);
+      
+      if (hasPhoneDrawed &&!TEST_PHONES.includes(phone)) {
+        alert('该手机号码已参与过抽奖，每个手机号限抽一次！');
+        return;
+      }
+      
+      userInfo = { phoneNumber: phone };
+      hasRegistered = true;
+      
+      // 保存数据
+      saveDataToStorage();
+      
+      // 更新界面
+      updateAdminButtonVisibility();
+      
+      // 关闭模态框并开始抽奖
+      hideModal(wechatModal, modalContent);
+      setTimeout(spinWheel, 400);
+    }
+    
+    // 开始抽奖流程
+    function startDrawProcess() {
+      if (isSpinning) return;
+      
+      // 必须先登记手机号才能抽奖
+      if (!hasRegistered) {
+        showModal(wechatModal, modalContent);
+      } else {
+        // 检查该手机号是否已抽奖
+        const hasPhoneDrawed = prizeRecordsData.some(record => record.phoneNumber === userInfo.phoneNumber);
+        const isTestPhone = TEST_PHONES.includes(userInfo.phoneNumber);
+        
+        if (!isTestPhone && hasPhoneDrawed) {
+          alert('该手机号码已参与过抽奖，每个手机号限抽一次！');
+          return;
+        }
+        
+        spinWheel();
+      }
+    }
+    
+    // 显示模态框
+    function showModal(modal, content) {
+      modal.classList.remove('hidden');
+      // 防止背景滚动
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+    
+    // 隐藏模态框
+    function hideModal(modal, content) {
+      content.classList.remove('scale-100', 'opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        // 恢复背景滚动
+        document.body.style.overflow = '';
+      }, 300);
+    }
+    
+    // 旋转转盘
+    function spinWheel() {
+      if (isSpinning) return;
+      
+      isSpinning = true;
+      startBtn.disabled = true;
+      wheelCenterBtn.style.pointerEvents = 'none';
+      startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      startBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>抽奖中...';
+      
+      // 随机选择奖品
+      const prizeIndex = Math.floor(Math.random() * 6);
+      const baseRotation = 360 * (5 + Math.random() * 3);
+      const prizeRotation = 360 - (prizeIndex * 60 + 30);
+      const totalRotation = baseRotation + prizeRotation;
+      
+      // 执行旋转动画
+      wheel.style.transform = `rotate(${totalRotation}deg)`;
+      
+      // 抽奖结束后处理
+      setTimeout(() => {
+        const prize = prizes[prizeIndex];
+        const isTestPhone = TEST_PHONES.includes(userInfo.phoneNumber);
+        
+        // 创建新记录，使用唯一ID标识每条记录
+        const record = {
+          id: Date.now().toString(), // 使用时间戳作为唯一ID
+          phoneNumber: userInfo.phoneNumber,
+          prize,
+          drawTime: new Date().toLocaleString(),
+          verifyTime: ''
+        };
+        
+        // 添加新记录
+        prizeRecordsData.push(record);
+        
+        // 测试号码可以重复抽奖，非测试号码只能抽一次
+        if (!isTestPhone) {
+          hasDrawed = true;
+          startBtn.innerHTML = '<i class="fa fa-check-circle mr-2"></i>已参与抽奖';
+        } else {
+          // 测试号码重置按钮状态，允许再次抽奖
+          startBtn.disabled = false;
+          wheelCenterBtn.style.pointerEvents = 'auto';
+          startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+          startBtn.innerHTML = '<i class="fa fa-play-circle mr-2"></i>开始抽奖';
+        }
+        
+        // 保存数据
+        saveDataToStorage();
+        
+        // 更新中奖结果
+        prizeResult.textContent = prize;
+        winnerPhone.textContent = `(${userInfo.phoneNumber})`;
+        showModal(resultModal, resultContent);
+        
+        // 更新统计数据并实时刷新管理员界面
+        updateAdminStats();
+        if (isAdminLoggedIn) {
+          updateAdminRecords();
+        }
+        
+        isSpinning = false;
+      }, 5000);
+    }
+    
+    // 打开管理员面板
+    function openAdminPanel() {
+      const isAdmin = userInfo && userInfo.phoneNumber === ADMIN_PHONE;
+      if (isAdmin ||!hasDrawed) {
+        adminPanel.classList.remove('translate-x-full');
+        // 防止背景滚动
+        document.body.style.overflow = 'hidden';
+        // 每次打开都必须重新登录
+        logoutAdmin();
+      }
+    }
+    
+    // 关闭管理员面板
+    function closeAdminPanel() {
+      adminPanel.classList.add('translate-x-full');
+      // 恢复背景滚动
+      document.body.style.overflow = '';
+      logoutAdmin();
+    }
+    
+    // 管理员登出
+    function logoutAdmin() {
+      isAdminLoggedIn = false;
+      adminContent.classList.add('hidden');
+      adminLoginPrompt.classList.remove('hidden');
+      adminPassword.value = '';
+    }
+    
+    // 管理员登录
+    function adminLogin() {
+      if (adminPassword.value === ADMIN_PASSWORD) {
+        isAdminLoggedIn = true;
+        adminContent.classList.remove('hidden');
+        adminLoginPrompt.classList.add('hidden');
+        adminPassword.value = '';
+        updateAdminRecords();
+      } else {
+        alert('密码错误');
+      }
+    }
+    
+    // 刷新记录
+    function refreshRecords() {
+      // 重新加载数据
+      loadDataFromStorage();
+      updateAdminRecords();
+      updateAdminStats();
+      
+      // 显示刷新成功提示
+      const originalText = refreshRecordsBtn.innerHTML;
+      refreshRecordsBtn.innerHTML = '<i class="fa fa-check mr-1"></i>已刷新';
+      
+      setTimeout(() => {
+        refreshRecordsBtn.innerHTML = originalText;
+      }, 1500);
+    }
+    
+    // 更新管理员记录表格
+    function updateAdminRecords() {
+      if (prizeRecordsData.length === 0) {
+        prizeRecords.innerHTML = `
+          <tr>
+            <td colspan="5" class="px-6 py-10 text-center text-gray-500">
+              暂无记录
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      // 按时间倒序排序
+      const sortedRecords = [...prizeRecordsData].sort((a, b) => 
+        new Date(b.drawTime) - new Date(a.drawTime)
+      );
+      
+      // 生成表格内容
+      let recordsHtml = '';
+      sortedRecords.forEach((record) => {
+        // 使用记录的唯一ID作为行ID
+        recordsHtml += `
+          <tr id="record-${record.id}">
+            <td class="px-6 py-4 whitespace-nowrap">${record.phoneNumber}</td>
+            <td class="px-6 py-4 whitespace-nowrap font-medium">${record.prize}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${record.drawTime}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm ${record.verifyTime? 'text-green-600' : 'text-gray-400'}">
+              ${record.verifyTime || '未核销'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              ${!record.verifyTime? 
+                `<button class="verify-btn text-primary hover:text-primary/80 text-sm btn-feedback" data-id="${record.id}">
+                  标记核销
+                </button>` : 
+                `<span class="text-green-600 text-sm">已核销</span>`
+              }
+            </td>
+          </tr>
+        `;
+      });
+      
+      prizeRecords.innerHTML = recordsHtml;
+      
+      // 为每个核销按钮绑定事件，使用唯一ID查找记录
+      document.querySelectorAll('.verify-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const recordId = this.getAttribute('data-id');
+          verifyPrizeById(recordId);
+        });
+      });
+    }
+    
+    // 通过唯一ID标记核销
+    function verifyPrizeById(recordId) {
+      // 查找ID对应的记录
+      const recordIndex = prizeRecordsData.findIndex(record => record.id === recordId);
+      
+      if (recordIndex === -1) {
+        alert('未找到该记录');
+        return;
+      }
+      
+      const record = prizeRecordsData[recordIndex];
+      
+      // 确认对话框显示对应的手机号
+      if (confirm(`确认标记手机号 ${record.phoneNumber} 的奖品"${record.prize}"为已核销？`)) {
+        // 设置核销时间
+        const now = new Date();
+        prizeRecordsData[recordIndex].verifyTime = now.toLocaleString();
+        
+        // 保存数据
+        saveDataToStorage();
+        
+        // 立即更新界面
+        updateAdminRecords();
+        updateAdminStats();
+        
+        // 高亮显示已更新的行
+        const recordRow = document.getElementById(`record-${recordId}`);
+        if (recordRow) {
+          recordRow.classList.add('bg-green-50');
+          setTimeout(() => {
+            recordRow.classList.remove('bg-green-50');
+          }, 2000);
+        }
+      }
+    }
+    
+    // 清空所有中奖记录
+    function clearAllRecords() {
+      if (confirm('确定要清空所有中奖记录吗？此操作不可恢复！')) {
+        // 清空所有记录
+        prizeRecordsData = [];
+        
+        // 重置用户状态
+        hasRegistered = false;
+        hasDrawed = false;
+        userInfo = null;
+        
+        // 重置按钮状态
+        startBtn.disabled = false;
+        wheelCenterBtn.style.pointerEvents = 'auto';
+        startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        startBtn.innerHTML = '<i class="fa fa-play-circle mr-2"></i>开始抽奖';
+        
+        // 保存数据
+        saveDataToStorage();
+        
+        // 立即更新界面
+        updateAdminRecords();
+        updateAdminStats();
+        
+        // 显示成功提示
+        alert('所有中奖记录已清空');
+      }
+    }
+    
+    // 更新管理员统计数据
+    function updateAdminStats() {
+      // 更新总参与人数
+      totalParticipants.textContent = prizeRecordsData.length;
+      
+      // 计算并更新已核销数量
+      const verifiedCount = prizeRecordsData.filter(record => record.verifyTime && record.verifyTime!== '').length;
+      totalPrizes.textContent = verifiedCount;
+      
+      // 更新各奖品统计
+      const prizeCounts = {
+        "1个鸡腿": 0,
+        "1只凤爪": 0,
+        "1根鸭脖": 0,
+        "30元券": 0,
+        "1听啤酒": 0,
+        "1份花生米": 0
+      };
+      
+      prizeRecordsData.forEach(record => {
+        prizeCounts[record.prize]++;
+      });
+      
+      const maxCount = Math.max(...Object.values(prizeCounts), 1);
+      
+      Object.keys(prizeCounts).forEach(prize => {
+        const count = prizeCounts[prize];
+        const percentage = (count / maxCount) * 100;
+        
+        prizeCountElements[prize].count.textContent = count;
+        prizeCountElements[prize].bar.style.width = `${percentage}%`;
+      });
+    }
+    
+    // 初始化页面
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+    
